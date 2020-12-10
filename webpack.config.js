@@ -5,11 +5,14 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { WebpackManifestPlugin } = require("webpack-manifest-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
+const appSrc = path.resolve(__dirname, "src");
 const appIndex = path.resolve(__dirname, "src", "index.tsx");
 const appBuild = path.resolve(__dirname, "build");
 const appPublic = path.resolve(__dirname, "public");
 const appHtml = path.resolve(__dirname, "public", "index.html");
+
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false";
 
 function getClientEnv(nodeEnv) {
@@ -59,37 +62,73 @@ module.exports = (webpackEnv) => {
       // rules
       rules: [
         {
-          oneOf: [
+          test: /\.(ts|tsx)$/,
+          exclude: /node_modules/,
+          use: [
             {
-              test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
-              loader: "url-loader",
+              loader: "ts-loader",
               options: {
-                limit: 10000,
-                outputPath: "static/media",
-                name: "[name].[hash:8].[ext]",
-              },
-            },
-            {
-              test: /\.(ts|tsx)$/,
-              exclude: /node_modules/,
-              use: [
-                "cache-loader",
-                {
-                  loader: "ts-loader",
-                  options: {
-                    transpileOnly: isEnvDevelopment ? true : false,
-                  },
-                },
-              ],
-            },
-            {
-              loader: "file-loader",
-              exclude: [/\.(js|mjs|jsx|ts|tsx)$/, /\.html$/, /\.json$/],
-              options: {
-                name: "static/media/[name].[hash:8].[ext]",
+                transpileOnly: isEnvDevelopment ? true : false,
               },
             },
           ],
+        },
+        {
+          test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
+          loader: "url-loader",
+          options: {
+            limit: 10000,
+            outputPath: "static/media",
+            name: "[name].[hash:8].[ext]",
+          },
+        },
+        {
+          test: /\.(ts|tsx)$/,
+          exclude: /node_modules/,
+          use: [
+            "cache-loader",
+            {
+              loader: "ts-loader",
+              options: {
+                transpileOnly: isEnvDevelopment ? true : false,
+              },
+            },
+          ],
+        },
+        {
+          loader: "file-loader",
+          exclude: [/\.(js|mjs|jsx|ts|tsx)$/, /\.html$/, /\.json$/],
+          options: {
+            name: "static/media/[name].[hash:8].[ext]",
+          },
+        },
+        {
+          test: /\.s[ac]ss$/i,
+          use: [
+            "style-loader", // creates style nodes from JS strings
+            "css-loader", // translates CSS into CommonJS
+            {
+              loader: "sass-loader",
+              options: {
+                sourceMap: true,
+                modules: true,
+              },
+            },
+          ],
+          exclude: /node_modules/,
+        },
+        {
+          test: /\.(ts|tsx)$/,
+          enforce: "pre",
+          exclude: /node_modules/,
+          loader: "eslint-loader",
+          options: {
+            cache: true,
+            formatter: isEnvDevelopment
+              ? "codeframe"
+              : isEnvProduction && "stylish",
+          },
+          include: appSrc,
         },
       ],
     },
@@ -117,6 +156,9 @@ module.exports = (webpackEnv) => {
         eslint: {
           files: "./src/**/*.{ts,tsx,js,jsx}",
         },
+      }),
+      new MiniCssExtractPlugin({
+        filename: "[name].css",
       }),
     ],
     cache: {
